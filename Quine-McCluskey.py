@@ -80,16 +80,14 @@ def Simplification():
                             Minterms[Group][CurrentBinary]
                             + Minterms[Group + 1][AdjacentBinary]
                         )
-            if GroupBinary != []: # 
+            if GroupBinary != []:  #
                 TempBinRep.append(GroupBinary)
                 TempMinterm.append(GroupMinterm)
-
         if TempBinRep == []:
-            break # No more simplification possible
+            break  # No more simplification possible
         BinaryRepresentation = TempBinRep
         Minterms = TempMinterm
-
-    if BinaryPrimImpl != []: # Prime implicants found
+    if BinaryPrimImpl != []:  # Prime implicants found
         BinaryRepresentation += BinaryPrimImpl
         Minterms += MintermPrimImpl
 
