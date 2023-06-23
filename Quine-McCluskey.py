@@ -1,22 +1,8 @@
-def d2b(Decimal, resolution=0):
-    Binary = ""
-    count = 0
-    while Decimal != 0:
-        bin = str(Decimal % 2)
-        Binary += bin
-        if bin == "1":
-            count += 1
-        Decimal //= 2
-    if resolution:
-        Binary += "0" * (resolution - len(Binary))  # Justification
-    return [count, Binary[::-1]]
-
-
-def Comparator(a, b):
+def compare(a, b):
     out = ""
     BitDifference = 0
     for index in range(len(a)):
-        if a[index] != b[index]:
+        if a[index] == b[index]:
             out += a[index]
             continue
         out += "-"
@@ -28,116 +14,112 @@ def Comparator(a, b):
 
 Minterms = []
 BinaryRepresentation = []
-
-InputMinTerms = list(map(int, input("Enter min-terms: ").split(",")))
+Matches = []
+# dont'care
+UserIn = input("Enter min-terms: ").split("+")
+InputMinTerms = list(set(map(int, UserIn[0].split(","))))
+MinTerms = InputMinTerms
+if len(UserIn) > 1:
+    DontCare = list(set(map(int, UserIn[1].split(","))))
+    MinTerms += DontCare
+    MinTerms = sorted(MinTerms)
 
 
 def InitialiseTable(lst):
     global Minterms
     global BinaryRepresentation
+    global Matches
     MintermDict = {}
     BinaryDict = {}
-    largestBinary = len(d2b(max(lst))[1])
+    MatchesDict = {}
+    largestBinary = len(bin(max(lst))[2:])
     for element in lst:
-        count, BinNum = d2b(element, largestBinary)
-        if count not in MintermDict:
-            MintermDict[count] = [[element]]
-            BinaryDict[count] = [BinNum]
-        else:
-            MintermDict[count].append([element])
-            BinaryDict[count].append(BinNum)
+        BinNum = bin(element)[2:].zfill(largestBinary)
+        Count1s = BinNum.count("1")
+        MintermDict[Count1s] = MintermDict.get(Count1s, []) + [str(element)]
+        BinaryDict[Count1s] = BinaryDict.get(Count1s, []) + [BinNum]
+        MatchesDict[Count1s] = MatchesDict.get(Count1s, []) + [False]
     Minterms = list((MintermDict.values()))
     BinaryRepresentation = list((BinaryDict.values()))
+    Matches = list((MatchesDict.values()))
 
 
-InitialiseTable(InputMinTerms)
-print(Minterms)
-print(BinaryRepresentation)  # Display
+InitialiseTable(MinTerms)
+# print(Minterms)
+# print(BinaryRepresentation)
+# print(Matches)
 
-# Catch prime implicants along the way & convert to recurrsion
+MintermPrimImpl = []
+BinaryPrimImpl = []
+
+
 def Simplification():
     global Minterms
     global BinaryRepresentation
-    MintermPrimImpl = []
-    BinaryPrimImpl = []
+    global Matches
+    global MintermPrimImpl
+    global BinaryPrimImpl
     while True:
         TempBinRep = []
         TempMinterm = []
+        TempMatches = []
         for Group in range(len(BinaryRepresentation) - 1):
             GroupBinary = []
             GroupMinterm = []
+            GroupMatch = []
             for CurrentBinary in range(len(BinaryRepresentation[Group])):
                 for AdjacentBinary in range(len(BinaryRepresentation[Group + 1])):
-                    ReducedBinary = Comparator(
+                    ReducedBinary = compare(
                         BinaryRepresentation[Group][CurrentBinary],
                         BinaryRepresentation[Group + 1][AdjacentBinary],
                     )
-                    if ReducedBinary == False:
-                        continue
-                    if ReducedBinary not in GroupBinary:
+                    if ReducedBinary is not False:
                         GroupBinary.append(ReducedBinary)
                         GroupMinterm.append(
                             Minterms[Group][CurrentBinary]
+                            + ","
                             + Minterms[Group + 1][AdjacentBinary]
                         )
-            if GroupBinary != []:  #
+                        GroupMatch.append(False)
+                        Matches[Group][CurrentBinary] = True
+                        Matches[Group + 1][AdjacentBinary] = True
+            if GroupBinary != []:
                 TempBinRep.append(GroupBinary)
                 TempMinterm.append(GroupMinterm)
+                TempMatches.append(GroupMatch)
+        for Group in range(len(Matches)):  # Pick up prime implicants
+            for CurrentState in range(len(Matches[Group])):
+                if (
+                    Matches[Group][CurrentState] is False
+                    and BinaryRepresentation[Group][CurrentState] not in BinaryPrimImpl
+                ):
+                    BinaryPrimImpl.append(BinaryRepresentation[Group][CurrentState])
+                    MintermPrimImpl.append(Minterms[Group][CurrentState])
         if TempBinRep == []:
-            break  # No more simplification possible
+            break
         BinaryRepresentation = TempBinRep
         Minterms = TempMinterm
-    if BinaryPrimImpl != []:  # Prime implicants found
-        BinaryRepresentation += BinaryPrimImpl
-        Minterms += MintermPrimImpl
+        Matches = TempMatches
 
 
 Simplification()
-
-# Simplify this
-def EssentialPrimeImpl():
-    global Minterms
-    global BinaryRepresentation
-    Repeated = {}
-    EssentialBin = []
-    for Group in Minterms:
-        for lst in Group:
-            for element in lst:
-                if element in Repeated:
-                    Repeated[element] += 1
-                else:
-                    Repeated[element] = 1
-    for key in Repeated:
-        if Repeated[key] == 1:
-            for Group in range(len(Minterms)):
-                for lst in range(len(Minterms[Group])):
-                    for element in range(len(Minterms[Group][lst])):
-                        if (
-                            Minterms[Group][lst][element] == key
-                            and BinaryRepresentation[Group][lst] not in EssentialBin
-                        ):
-                            EssentialBin += BinaryRepresentation[Group]
-    BinaryRepresentation = EssentialBin
+print(MintermPrimImpl)
+print(BinaryPrimImpl)
 
 
-EssentialPrimeImpl()
-print(BinaryRepresentation)  # Display
+EssentialImpl = []
+lst = []
+for i in MintermPrimImpl:
+    lst += list(map(int, i.split(",")))
+for j in MintermPrimImpl:
+    x = list(map(int, j.split(",")))
+    templst = lst[:]
+    for element in x:
+        templst.remove(element)
+    if set(x).intersection(set(templst)) != set(x):
+        EssentialImpl.append(j)
+    else:
+        for num in x:
+            lst.remove(num)
 
-
-def SOP():
-    global BinaryRepresentation
-    alphabets = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    out = ""
-    for binary in BinaryRepresentation:
-        for dig in range(len(binary)):
-            if binary[dig] == "-":
-                continue
-            out += alphabets[dig]
-            if binary[dig] == "0":
-                out += "'"
-        if binary != BinaryRepresentation[-1]:
-            out += " + "
-    return out
-
-
-print(SOP())  # Display
+print(EssentialImpl)
