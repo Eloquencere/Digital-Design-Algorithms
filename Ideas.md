@@ -11,3 +11,5 @@
 * Convert maxterm to minterm
 * Make the code work for don't care conditions
 * Convert SOP to POS (cannonical form)
+
+Implementing logic functions using mux and demux, & state machines & sr to jk conversion
